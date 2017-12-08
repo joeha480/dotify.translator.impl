@@ -7,7 +7,6 @@ import static org.junit.Assert.assertTrue;
 import org.daisy.dotify.api.translator.BrailleTranslatorResult;
 import org.daisy.dotify.api.translator.TranslationException;
 import org.daisy.dotify.api.translator.UnsupportedMetricException;
-import org.daisy.dotify.common.text.BreakPointHandler;
 import org.junit.Test;
 
 @SuppressWarnings("javadoc")
@@ -52,7 +51,7 @@ public class DefaultBrailleTranslatorResultTest {
 	}
 
 	private static BrailleTranslatorResult newTranslatorResult(String str) {
-		return new DefaultBrailleTranslatorResult(new BreakPointHandler(str), null);
+		return new DefaultBrailleTranslatorResult(str, null);
 	}
 
 }

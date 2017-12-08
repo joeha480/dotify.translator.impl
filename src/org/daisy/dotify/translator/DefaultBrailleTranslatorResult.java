@@ -10,8 +10,8 @@ class DefaultBrailleTranslatorResult implements BrailleTranslatorResult {
 	private final BrailleFinalizer finalizer;
 	private int forceCount;
 
-	public DefaultBrailleTranslatorResult(BreakPointHandler bph, BrailleFinalizer finalizer) {
-		this.bph = bph;
+	public DefaultBrailleTranslatorResult(String braille, BrailleFinalizer finalizer) {
+		this.bph = new BreakPointHandler(braille);
 		this.finalizer = finalizer;
 		this.forceCount = 0;
 	}
@@ -20,6 +20,12 @@ class DefaultBrailleTranslatorResult implements BrailleTranslatorResult {
 		this.bph = template.bph.copy();
 		this.finalizer = template.finalizer;
 		this.forceCount = template.forceCount;
+	}
+
+//	@Override
+	public void reset() {
+		bph.reset();
+		forceCount = 0;
 	}
 
 	@Override
