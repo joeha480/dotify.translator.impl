@@ -1,5 +1,6 @@
 package org.daisy.dotify.translator.impl.sv_SE;
 
+import java.util.PrimitiveIterator.OfInt;
 import java.util.regex.Pattern;
 
 import org.daisy.dotify.common.text.SplitResult;
@@ -24,10 +25,6 @@ class CapitalizationMarkers implements StringFilter {
 	 * and ending at the end of input or before any character that isn't a letter, the braille number symbol (⠼)  or a digit. 
 	 */
 	private static final Pattern UPPERCASE_LETTER_SEQUENCE_SPACE_DASH_SLASH = Pattern.compile("(?<=[^\\p{L}]|\\A)(((\\p{Lu}(\u00ad)?)+[\\s\\-/]+)+(\\p{Lu}(\u00ad)?)+)(?=[^\\p{L}^\u283c^\\d]|\\z)");
-	/**
-	 * Matches sequences of upper case letters with one or more whitespace in between.
-	 */
-	private static final Pattern UPPERCASE_LETTER_SEQUENCE_WITH_SPACES_IN_BETWEEN = Pattern.compile("([\\p{Lu}][\\s]+)+[\\p{Lu}]");
 	/**
 	 * Matches sequences of letters, dashes, digits and soft hyphens.
 	 */
@@ -55,7 +52,7 @@ class CapitalizationMarkers implements StringFilter {
 		for (SplitResult sr : StringSplitter.split(input, UPPERCASE_LETTER_SEQUENCE_SPACE_DASH_SLASH)) {
 			String s = sr.getText();
 			if (sr.isMatch()) {
-				if (UPPERCASE_LETTER_SEQUENCE_WITH_SPACES_IN_BETWEEN.matcher(s).matches()) {
+				if (isUpperCaseSequenceWithSpaces(s)) {
 					// String is a group of single capital letters, e.g: 'E X A M P L E'
 					insertCharMarker(ret, s);
 				} else {
@@ -126,6 +123,30 @@ class CapitalizationMarkers implements StringFilter {
 			}
 			ret.appendCodePoint(v);
 		});
+	}
+	
+	/**
+	 * Matches sequences of upper case letters with one or more whitespace in between.
+	 */
+	private static boolean isUpperCaseSequenceWithSpaces(String s) {
+		boolean uppercase = false;
+		OfInt i = s.codePoints().iterator();
+		int c = 0;
+		while (i.hasNext()) {
+			c = i.nextInt();
+			if (Character.isUpperCase(c)) {
+				if (!uppercase) {
+					uppercase = true;
+				} else {
+					return false;
+				}
+			} else if (Character.isWhitespace(c)) {
+				uppercase = false;
+			} else {
+				return false;
+			}
+		}
+		return uppercase;
 	}
 
 }
