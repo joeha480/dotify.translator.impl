@@ -29,10 +29,6 @@ class CapitalizationMarkers implements StringFilter {
 	 */
 	private static final Pattern UPPERCASE_LETTER_SEQUENCE_WITH_SPACES_IN_BETWEEN = Pattern.compile("([\\p{Lu}][\\s]+)+[\\p{Lu}]");
 	/**
-	 * Matches upper case letters in the input.
-	 */
-	private static final Pattern UPPERCASE_LETTER = Pattern.compile("(\\p{Lu})");
-	/**
 	 * Matches sequences of letters, dashes, digits and soft hyphens.
 	 */
 	private static final Pattern WORDS = Pattern.compile("[\\p{L}[\\-\\d\u00ad]]+");
@@ -61,7 +57,7 @@ class CapitalizationMarkers implements StringFilter {
 			if (sr.isMatch()) {
 				if (UPPERCASE_LETTER_SEQUENCE_WITH_SPACES_IN_BETWEEN.matcher(s).matches()) {
 					// String is a group of single capital letters, e.g: 'E X A M P L E'
-					ret.append(UPPERCASE_LETTER.matcher(s).replaceAll(CHAR_MARKER + "$1"));
+					insertCharMarker(ret, s);
 				} else {
 					// String is a group of capitalized words.
 					String asGroup = markAsGroup(s);
@@ -108,7 +104,7 @@ class CapitalizationMarkers implements StringFilter {
 							ret.append(WORD_PART_POSTFIX);
 						} else {
 							// Use a single upper case mark for all upper case letters
-							ret.append(UPPERCASE_LETTER.matcher(u).replaceAll(CHAR_MARKER+"$1"));
+							insertCharMarker(ret, u);
 						}
 					}
 				}
@@ -118,6 +114,18 @@ class CapitalizationMarkers implements StringFilter {
 			}
 		}
 		return ret.toString();
+	}
+	
+	/**
+	 * Matches upper case letters in the input.
+	 */
+	private static void insertCharMarker(StringBuffer ret, String s) {
+		s.codePoints().forEach(v->{
+			if (Character.isUpperCase(v)) {
+				ret.append(CHAR_MARKER);
+			}
+			ret.appendCodePoint(v);
+		});
 	}
 
 }
