@@ -31,6 +31,17 @@ public class SwedishBrailleFilter implements StringFilter {
 	 * 			contains break point characters such as space, dash and soft hyphen.
 	 */
 	public SwedishBrailleFilter(String locale, boolean strict) {
+		this(locale, strict, false);
+	}
+	
+	/**
+	 * Creates a new Swedish braille filter with the specified mode.
+	 * @param locale the locale
+	 * @param strict if true the result is braille only, if false the result 
+	 * 			contains break point characters such as space, dash and soft hyphen.
+	 * @param distinguishableDiacritics true if different diacritics should be distinguishable, false otherwise
+	 */
+	public SwedishBrailleFilter(String locale, boolean strict, boolean distinguishableDiacritics) {
 		filters = new CombinationFilter();
 		// Remove zero width space
 		filters.add(new RegexFilter("\\u200B", ""));
@@ -42,10 +53,10 @@ public class SwedishBrailleFilter implements StringFilter {
 		filters.add(new CapitalizationMarkers());
 
 		Locale l = FilterLocale.parse(locale).toLocale();
-		// Text to braille, Pas 1
+		// Text to braille, pass 1
 		filters.add(new UCharFilter(getResource("sv_SE-pas1.xml"), l));
-		// Text to braille, Pas 2
-		filters.add(new UCharFilter(getResource("sv_SE-pas2.xml"), l));
+		// Text to braille, pass 2
+		filters.add(new UCharFilter(l, getResource("sv_SE-pas2.xml"), getResource(distinguishableDiacritics?"sv_SE-exact-diacritics.xml":"sv_SE-simple-diacritics.xml")));
 		// Remove redundant whitespace
 		filters.add(new RegexFilter("(\\s+)", " "));
 		
