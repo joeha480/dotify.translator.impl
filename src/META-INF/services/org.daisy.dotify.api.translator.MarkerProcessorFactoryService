@@ -1,3 +1,4 @@
 org.daisy.dotify.translator.impl.sv_SE.SwedishMarkerProcessorFactoryService
 org.daisy.dotify.translator.impl.DefaultBypassMarkerProcessorFactoryService
 org.daisy.dotify.translator.impl.PreTranslatedMarkerProcessorFactoryService
+org.daisy.dotify.translator.impl.liblouis.LiblouisMarkerProcessorFactoryService
