@@ -5,14 +5,19 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Logger;
 
+import org.daisy.dotify.api.translator.MarkerProcessor;
 import org.daisy.dotify.common.braille.BrailleNotationConverter;
 import org.daisy.dotify.common.text.TextFileReader;
+import org.daisy.dotify.translator.DefaultMarkerProcessor;
 
 class LiblouisFileReader {
 	private final ResourceResolver rr;
 	private final LiblouisBrailleFilter.Builder cr;
+	private final Map<String, LiblouisEmphasisManager> emp;
 	private final BrailleNotationConverter nc;
 	
 	private final Logger logger;
@@ -24,6 +29,7 @@ class LiblouisFileReader {
 	public LiblouisFileReader(ResourceResolver resolver) {
 		this.rr = resolver;
 		this.cr = new LiblouisBrailleFilter.Builder();
+		this.emp = new HashMap<>();
 		this.nc = new BrailleNotationConverter("-");
 		this.logger = Logger.getLogger(this.getClass().getCanonicalName());
 	}
@@ -38,6 +44,14 @@ class LiblouisFileReader {
 	
 	public LiblouisBrailleFilter getFilter() {
 		return cr.build();
+	}
+	
+	public MarkerProcessor buildMarkerProcessor() {
+		DefaultMarkerProcessor.Builder ret = new DefaultMarkerProcessor.Builder();
+		emp.entrySet().forEach(entry->{
+			ret.addDictionary(entry.getKey(), entry.getValue().make());
+		});
+		return ret.build();
 	}
 
 	/**
@@ -95,11 +109,44 @@ class LiblouisFileReader {
 				cr.numsign(nc.parseBrailleNotation(f[1]));
 			} else if ("capsign".equals(f[0])) {
 				cr.capsign(nc.parseBrailleNotation(f[1]));
+			} else if ("begemph".equals(f[0])) {
+				getOrAddEmphasis(f[1]).getNoContext().setPrefix(nc.parseBrailleNotation(f[2]));
+			} else if ("endemph".equals(f[0])) {
+				getOrAddEmphasis(f[1]).getNoContext().setPostfix(nc.parseBrailleNotation(f[2]));
+			} else if ("emphletter".equals(f[0])) {
+				getOrAddEmphasis(f[1]).getLetter().setPrefix(nc.parseBrailleNotation(f[2]));
+			} else if ("begemphword".equals(f[0])) {
+				getOrAddEmphasis(f[1]).getWord().setPrefix(nc.parseBrailleNotation(f[2]));
+			} else if ("endemphword".equals(f[0])) {
+				getOrAddEmphasis(f[1]).getWord().setPostfix(nc.parseBrailleNotation(f[2]));
+			} else if ("begemphphrase".equals(f[0])) {
+				getOrAddEmphasis(f[1]).getPhrase().setPrefix(nc.parseBrailleNotation(f[2]));
+			} else if ("endemphphrase".equals(f[0])) {
+				LiblouisEmphasisManager m = getOrAddEmphasis(f[1]);
+				m.getPhrase().setPostfix(nc.parseBrailleNotation(f[3]));
+				if ("before".equals(f[2])) {
+					m.getPhrase().setBeforeLastWord(true);
+				} else if ("after".equals(f[2])) {
+					m.getPhrase().setBeforeLastWord(false);
+				} else {
+					//Ignore
+				}
+			} else if ("lenemphphrase".equals(f[0])) {
+				getOrAddEmphasis(f[1]).getPhrase().setPhraseLength(Integer.parseInt(f[2]));
 			}
 			else {
 				System.out.println("Not implemented: " + ld.getLine());
 			}
 		}
+	}
+	
+	private LiblouisEmphasisManager getOrAddEmphasis(String label) {
+		LiblouisEmphasisManager ret = emp.get(label);
+		if (ret==null) {
+			ret = new LiblouisEmphasisManager();
+			emp.put(label, ret);
+		}
+		return ret;
 	}
 	
 	public void addEntry(String value, String replacement, CharClass group) {
