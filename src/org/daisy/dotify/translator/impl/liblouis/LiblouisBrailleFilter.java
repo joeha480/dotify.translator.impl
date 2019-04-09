@@ -10,6 +10,7 @@ import org.daisy.dotify.api.hyphenator.HyphenatorInterface;
 import org.daisy.dotify.api.translator.BrailleFilter;
 import org.daisy.dotify.api.translator.TextAttribute;
 import org.daisy.dotify.api.translator.Translatable;
+import org.daisy.dotify.api.translator.TranslatableWithContext;
 import org.daisy.dotify.api.translator.TranslationException;
 import org.daisy.dotify.api.translator.TranslatorSpecification;
 import org.liblouis.CompilationException;
@@ -77,6 +78,11 @@ class LiblouisBrailleFilter implements BrailleFilter {
 		} catch (org.liblouis.TranslationException | DisplayException e) {
 			throw new LiblouisBrailleFilterException(e);
 		}
+	}
+	
+	@Override
+	public String filter(TranslatableWithContext specification) throws TranslationException {
+		throw new UnsupportedOperationException("Not implemented");
 	}
 
 	/**

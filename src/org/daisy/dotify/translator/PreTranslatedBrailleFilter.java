@@ -1,7 +1,10 @@
 package org.daisy.dotify.translator;
 
+import java.util.stream.Collectors;
+
 import org.daisy.dotify.api.translator.BrailleFilter;
 import org.daisy.dotify.api.translator.Translatable;
+import org.daisy.dotify.api.translator.TranslatableWithContext;
 import org.daisy.dotify.api.translator.TranslationException;
 
 /**
@@ -20,6 +23,13 @@ public class PreTranslatedBrailleFilter implements BrailleFilter {
 	@Override
 	public String filter(Translatable specification) throws TranslationException {
 		return specification.getText();
+	}
+
+	@Override
+	public String filter(TranslatableWithContext specification) throws TranslationException {
+		return specification.getTextToTranslate().stream()
+				.map(v->v.resolve())
+				.collect(Collectors.joining());
 	}
 
 }

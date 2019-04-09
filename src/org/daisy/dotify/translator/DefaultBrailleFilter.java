@@ -9,6 +9,7 @@ import org.daisy.dotify.api.hyphenator.HyphenatorInterface;
 import org.daisy.dotify.api.translator.BrailleFilter;
 import org.daisy.dotify.api.translator.MarkerProcessor;
 import org.daisy.dotify.api.translator.Translatable;
+import org.daisy.dotify.api.translator.TranslatableWithContext;
 import org.daisy.dotify.api.translator.TranslationException;
 import org.daisy.dotify.common.text.StringFilter;
 
@@ -75,6 +76,11 @@ public class DefaultBrailleFilter implements BrailleFilter {
 		}
 		//translate braille using the same filter, regardless of language
 		return filter.filter(specification.isHyphenating()?h.hyphenate(text):text);
+	}
+
+	@Override
+	public String filter(TranslatableWithContext specification) throws TranslationException {
+		throw new UnsupportedOperationException("Not implemented");
 	}
 	
 	private class DefaultBrailleFilterException extends TranslationException {
