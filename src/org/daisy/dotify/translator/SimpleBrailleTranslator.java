@@ -4,6 +4,7 @@ import org.daisy.dotify.api.translator.BrailleFilter;
 import org.daisy.dotify.api.translator.BrailleTranslator;
 import org.daisy.dotify.api.translator.BrailleTranslatorResult;
 import org.daisy.dotify.api.translator.Translatable;
+import org.daisy.dotify.api.translator.TranslatableWithContext;
 import org.daisy.dotify.api.translator.TranslationException;
 import org.daisy.dotify.common.text.BreakPointHandler;
 
@@ -45,6 +46,12 @@ public class SimpleBrailleTranslator implements BrailleTranslator {
 	
 	@Override
 	public BrailleTranslatorResult translate(Translatable specification) throws TranslationException {
+		BreakPointHandler bph = new BreakPointHandler(filter.filter(specification));
+		return new DefaultBrailleTranslatorResult(bph, finalizer);
+	}
+	
+	@Override
+	public BrailleTranslatorResult translate(TranslatableWithContext specification) throws TranslationException {
 		BreakPointHandler bph = new BreakPointHandler(filter.filter(specification));
 		return new DefaultBrailleTranslatorResult(bph, finalizer);
 	}
