@@ -3,6 +3,8 @@ package org.daisy.dotify.translator.impl.liblouis;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.daisy.dotify.api.hyphenator.HyphenatorConfigurationException;
 import org.daisy.dotify.api.hyphenator.HyphenatorFactoryMakerService;
@@ -10,6 +12,7 @@ import org.daisy.dotify.api.hyphenator.HyphenatorInterface;
 import org.daisy.dotify.api.translator.BrailleFilter;
 import org.daisy.dotify.api.translator.TextAttribute;
 import org.daisy.dotify.api.translator.Translatable;
+import org.daisy.dotify.api.translator.TranslatableWithContext;
 import org.daisy.dotify.api.translator.TranslationException;
 import org.daisy.dotify.api.translator.TranslatorSpecification;
 import org.liblouis.CompilationException;
@@ -72,6 +75,42 @@ class LiblouisBrailleFilter implements BrailleFilter {
 		String str = specification.isHyphenating()?h.hyphenate(specification.getText()):specification.getText();
 		//translate braille using the same filter, regardless of language
 		LiblouisTranslatable louisSpec = toLiblouisSpecification(str, specification, MARKERS);
+		try {
+			return toBrailleFilterString(louisSpec.getText(), table.translate(louisSpec.getText(), louisSpec.getTypeForm(), louisSpec.getCharAtts(), louisSpec.getInterCharAtts(), new UnicodeBrailleDisplayTable(Fallback.MASK)));
+		} catch (org.liblouis.TranslationException | DisplayException e) {
+			throw new LiblouisBrailleFilterException(e);
+		}
+	}
+	
+	@Override
+	public String filter(TranslatableWithContext specification) throws TranslationException {
+		String locale = specification.getLocale().orElse(loc);
+		
+		Stream<String> texts = specification.getText().stream().map(v->v.resolve());
+		
+		if (specification.shouldHyphenate()) {
+			HyphenatorInterface h = hyphenators.get(locale);
+			if (h == null) {
+				try {
+					h = hyphenatorFactoryMaker.newHyphenator(locale);
+				} catch (HyphenatorConfigurationException e) {
+					throw new LiblouisBrailleFilterException(e);
+				}
+				hyphenators.put(locale, h);
+			}
+			HyphenatorInterface h2 = h;
+			texts = texts.map(v->h2.hyphenate(v));
+		}
+		
+		String str = texts.collect(Collectors.joining());
+		Translatable.Builder tr = Translatable.text(str)
+				.locale(locale)
+				.hyphenate(specification.shouldHyphenate())
+				//FIXME:.attributes(value)
+				.markCapitalLetters(specification.shouldMarkCapitalLetters());
+		
+		//translate braille using the same filter, regardless of language
+		LiblouisTranslatable louisSpec = toLiblouisSpecification(str, tr.build(), MARKERS);
 		try {
 			return toBrailleFilterString(louisSpec.getText(), table.translate(louisSpec.getText(), louisSpec.getTypeForm(), louisSpec.getCharAtts(), louisSpec.getInterCharAtts(), new UnicodeBrailleDisplayTable(Fallback.MASK)));
 		} catch (org.liblouis.TranslationException | DisplayException e) {

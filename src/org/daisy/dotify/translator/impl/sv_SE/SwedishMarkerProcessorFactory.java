@@ -1,6 +1,5 @@
 package org.daisy.dotify.translator.impl.sv_SE;
 
-import org.daisy.dotify.api.translator.MarkerProcessor;
 import org.daisy.dotify.api.translator.MarkerProcessorConfigurationException;
 import org.daisy.dotify.api.translator.MarkerProcessorFactory;
 import org.daisy.dotify.api.translator.TextAttribute;
@@ -20,7 +19,7 @@ class SwedishMarkerProcessorFactory implements MarkerProcessorFactory {
 	private static final FilterLocale sv = FilterLocale.parse("sv");
 
 	@Override
-	public MarkerProcessor newMarkerProcessor(String locale, String mode) throws MarkerProcessorConfigurationException {
+	public DefaultMarkerProcessor newMarkerProcessor(String locale, String mode) throws MarkerProcessorConfigurationException {
 		if (FilterLocale.parse(locale).equals(sv)||FilterLocale.parse(locale).equals(sv_SE)) {
 			if (mode.equals(TranslatorType.UNCONTRACTED.toString())) {
 	
