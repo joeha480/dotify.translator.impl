@@ -1,13 +1,17 @@
 package org.daisy.dotify.translator;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.daisy.dotify.api.hyphenator.HyphenatorConfigurationException;
 import org.daisy.dotify.api.hyphenator.HyphenatorFactoryMakerService;
 import org.daisy.dotify.api.hyphenator.HyphenatorInterface;
 import org.daisy.dotify.api.translator.BrailleFilter;
-import org.daisy.dotify.api.translator.MarkerProcessor;
 import org.daisy.dotify.api.translator.Translatable;
 import org.daisy.dotify.api.translator.TranslatableWithContext;
 import org.daisy.dotify.api.translator.TranslationException;
@@ -23,7 +27,7 @@ import org.daisy.dotify.common.text.StringFilter;
 public class DefaultBrailleFilter implements BrailleFilter {
 	private final String loc;
 	private final StringFilter filter;
-	private final MarkerProcessor tap;
+	private final DefaultMarkerProcessor tap;
 	private final HyphenatorFactoryMakerService hyphenatorFactoryMaker;
 	private final Map<String, HyphenatorInterface> hyphenators;
 	
@@ -44,7 +48,7 @@ public class DefaultBrailleFilter implements BrailleFilter {
 	 * @param tap the marker processor
 	 * @param hyphenatorFactoryMaker the hyphenator factory maker
 	 */
-	public DefaultBrailleFilter(StringFilter filter, String locale, MarkerProcessor tap, HyphenatorFactoryMakerService hyphenatorFactoryMaker) {
+	public DefaultBrailleFilter(StringFilter filter, String locale, DefaultMarkerProcessor tap, HyphenatorFactoryMakerService hyphenatorFactoryMaker) {
 		this.loc = locale;
 		this.filter = filter;
 		this.tap = tap;
@@ -54,36 +58,83 @@ public class DefaultBrailleFilter implements BrailleFilter {
 
 	@Override
 	public String filter(Translatable specification) throws TranslationException {
+		if (specification.getText().isEmpty()) {
+			return "";
+		}
 		String locale = specification.getLocale();
 		if (locale==null) {
 			locale = loc;
 		}
-		HyphenatorInterface h = hyphenators.get(locale);
-		if (h == null && specification.isHyphenating()) {
-			// if we're not hyphenating the language in question, we do not
-			// need to
-			// add it, nor throw an exception if it cannot be found.
-			try {
-				h = hyphenatorFactoryMaker.newHyphenator(locale);
-			} catch (HyphenatorConfigurationException e) {
-				throw new DefaultBrailleFilterException(e);
-			}
-			hyphenators.put(locale, h);
-		}
+		
 		String text = specification.getText();
+		
+		if (!specification.shouldMarkCapitalLetters()) {
+			//TODO: toLowerCase may not always do what we want here,
+			//it depends on the lower case algorithm and the rules 
+			//of the braille for that language
+			text = text.toLowerCase(Locale.ROOT);
+		}
+		
+		if (specification.isHyphenating()) {
+			HyphenatorInterface h = hyphenators.get(locale);
+			if (h == null) {
+				try {
+					h = hyphenatorFactoryMaker.newHyphenator(locale);
+				} catch (HyphenatorConfigurationException e) {
+					throw new DefaultBrailleFilterException(e);
+				}
+				hyphenators.put(locale, h);
+			}
+			text = h.hyphenate(text);
+		}
+		
 		if (tap != null) {
 			text = tap.processAttributes(specification.getAttributes(), text);
 		}
 		//translate braille using the same filter, regardless of language
-		return filter.filter(specification.isHyphenating()?h.hyphenate(text):text);
+		return filter.filter(text);
 	}
 
 	@Override
 	public String filter(TranslatableWithContext specification) throws TranslationException {
-		// TODO Auto-generated method stub
-		return null;
+		String locale = specification.getLocale().orElse(loc);
+		
+		Stream<String> texts = specification.getText().stream().map(v->v.resolve());
+		if (!specification.shouldMarkCapitalLetters()) {
+			//TODO: toLowerCase may not always do what we want here,
+			//it depends on the lower case algorithm and the rules 
+			//of the braille for that language
+			texts = texts.map(v->v.toLowerCase(Locale.ROOT));
+		}
+		
+		if (specification.shouldHyphenate()) {
+			HyphenatorInterface h = hyphenators.get(locale);
+			if (h == null) {
+				try {
+					h = hyphenatorFactoryMaker.newHyphenator(locale);
+				} catch (HyphenatorConfigurationException e) {
+					throw new DefaultBrailleFilterException(e);
+				}
+				hyphenators.put(locale, h);
+			}
+			HyphenatorInterface h2 = h;
+			texts = texts.map(v->h2.hyphenate(v));
+		}
+
+		if (tap != null && specification.getAttributes().isPresent()) {
+			Stream<String> preceding = specification.getPrecedingText().stream().map(v->v.resolve());
+			Stream<String> following = specification.getFollowingText().stream().map(v->v.peek());
+			List<String> textsI = Stream.concat(Stream.concat(preceding, texts), following).collect(Collectors.toList());
+			String[] out = tap.processAttributesRetain(specification.getAttributes().get(), textsI);
+			int start = specification.getPrecedingText().size();
+			int end = start + specification.getText().size();
+			texts = Arrays.asList(out).subList(start, end).stream();
+		}
+		
+		//translate braille using the same filter, regardless of language
+		return filter.filter(texts.collect(Collectors.joining()));
 	}
-	
+
 	private class DefaultBrailleFilterException extends TranslationException {
 
 		/**
