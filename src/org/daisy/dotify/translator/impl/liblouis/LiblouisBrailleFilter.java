@@ -2,6 +2,8 @@ package org.daisy.dotify.translator.impl.liblouis;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -15,6 +17,7 @@ import org.daisy.dotify.api.translator.Translatable;
 import org.daisy.dotify.api.translator.TranslatableWithContext;
 import org.daisy.dotify.api.translator.TranslationException;
 import org.daisy.dotify.api.translator.TranslatorSpecification;
+import org.daisy.dotify.translator.DefaultMarkerProcessor;
 import org.liblouis.CompilationException;
 import org.liblouis.DisplayException;
 import org.liblouis.DisplayTable.Fallback;
@@ -88,6 +91,13 @@ class LiblouisBrailleFilter implements BrailleFilter {
 		
 		Stream<String> texts = specification.getText().stream().map(v->v.resolve());
 		
+		if (!specification.shouldMarkCapitalLetters()) {
+			//TODO: toLowerCase may not always do what we want here,
+			//it depends on the lower case algorithm and the rules 
+			//of the braille for that language
+			texts = texts.map(v->v.toLowerCase(Locale.ROOT));
+		}
+		
 		if (specification.shouldHyphenate()) {
 			HyphenatorInterface h = hyphenators.get(locale);
 			if (h == null) {
@@ -102,12 +112,15 @@ class LiblouisBrailleFilter implements BrailleFilter {
 			texts = texts.map(v->h2.hyphenate(v));
 		}
 		
-		String str = texts.collect(Collectors.joining());
+		List<String> textsList = texts.collect(Collectors.toList());
+		String str = textsList.stream().collect(Collectors.joining());
 		Translatable.Builder tr = Translatable.text(str)
 				.locale(locale)
 				.hyphenate(specification.shouldHyphenate())
-				//FIXME:.attributes(value)
 				.markCapitalLetters(specification.shouldMarkCapitalLetters());
+		
+		specification.getAttributes()
+			.ifPresent(att->tr.attributes(DefaultMarkerProcessor.toTextAttribute(att, textsList)));
 		
 		//translate braille using the same filter, regardless of language
 		LiblouisTranslatable louisSpec = toLiblouisSpecification(str, tr.build(), MARKERS);
