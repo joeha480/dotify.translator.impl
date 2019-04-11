@@ -163,7 +163,7 @@ public class DefaultMarkerProcessor implements MarkerProcessor {
 		}
 	}
 	
-	static TextAttribute toTextAttribute(AttributeWithContext c, List<String> texts) {
+	public static TextAttribute toTextAttribute(AttributeWithContext c, List<String> texts) {
 		return toTextAttribute(c, texts, 0);
 	}
 	
