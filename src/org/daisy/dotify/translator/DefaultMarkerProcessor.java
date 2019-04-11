@@ -7,7 +7,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
+import org.daisy.dotify.api.translator.AttributeWithContext;
+import org.daisy.dotify.api.translator.DefaultTextAttribute;
 import org.daisy.dotify.api.translator.MarkerProcessor;
 import org.daisy.dotify.api.translator.TextAttribute;
 
@@ -102,6 +105,89 @@ public class DefaultMarkerProcessor implements MarkerProcessor {
 				ret[text.length>0?text.length - 1:0] += m.getPostfix();
 			}
 			return ret;
+		}
+	}
+	
+	/**
+	 * Processes the input text chunks and attributes into a text containing
+	 * markers at the appropriate positions while retaining the text
+	 * partition as specified by the input array. The length of the texts
+	 * must match the text attributes specified width.
+	 * 
+	 * @param text
+	 *            the texts to process
+	 * @param atts
+	 *            the text attributes that apply to the text.
+	 * 
+	 * @return returns an array of strings with markers
+	 * 
+	 * @throws IllegalArgumentException
+	 *             if the specified attributes does not
+	 *             match the text.
+	 */
+	public String[] processAttributesRetain(AttributeWithContext atts, List<String> text) {
+		if (atts == null) {
+			return text.toArray(new String[text.size()]);
+		} else {
+			if (atts.getWidth() != text.size()) {
+				throw new IllegalArgumentException("Attribute context width (" + atts.getWidth() + ") does not match text list size (" + text.size() + ").");
+			}
+			Marker m  = getMarker(text.stream().collect(Collectors.joining()), toTextAttribute(atts, text));
+			String[] ret = new String[text.size()>0?text.size():1];
+			Arrays.fill(ret, "");
+
+			if (m != null) {
+				ret[0] = m.getPrefix() + (ret.length>0?ret[0]:"");
+			}
+			int startInx = 0;
+			if (atts.hasChildren()) {
+				for (AttributeWithContext d : atts) {
+					List<String> sr = text.subList(startInx, startInx + d.getWidth());
+					String[] res = processAttributesRetain(d, sr);
+					for (int i = 0; i < res.length; i++) {
+						ret[i + startInx] += res[i];
+					}
+					startInx += d.getWidth();
+				}
+			} else {
+				List<String> sr = text.subList(0, atts.getWidth());
+				String[] res = sr.toArray(new String[sr.size()]);
+				for (int i = 0; i < res.length; i++) {
+					ret[i] += res[i];
+				}
+			}
+			if (m != null) {
+				ret[text.size()>0?text.size() - 1:0] += m.getPostfix();
+			}
+			return ret;
+		}
+	}
+	
+	public static TextAttribute toTextAttribute(AttributeWithContext c, List<String> texts) {
+		return toTextAttribute(c, texts, 0);
+	}
+	
+	static TextAttribute toTextAttribute(AttributeWithContext c, List<String> texts, int offset) {
+		DefaultTextAttribute.Builder ret = new DefaultTextAttribute.Builder(c.getName().orElse(null));
+		if (offset>=texts.size()) {
+			throw new IllegalArgumentException();
+		}
+		if (c.hasChildren()) {
+			int _offs = offset;
+			int w = 0;
+			for (AttributeWithContext cc : c) {
+				TextAttribute ta = toTextAttribute(cc, texts, _offs);
+				_offs += cc.getWidth();
+				w += ta.getWidth();
+				ret.add(ta);
+			}
+			return ret.build(w);
+		} else {
+			int start = offset;
+			int end = start+c.getWidth();
+			return ret.build(texts.subList(start, end).stream()
+					.mapToInt(v->v.length())
+					.sum());
 		}
 	}
 
