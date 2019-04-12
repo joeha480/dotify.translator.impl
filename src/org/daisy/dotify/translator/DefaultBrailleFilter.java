@@ -91,7 +91,7 @@ public class DefaultBrailleFilter implements BrailleFilter {
 		if (tap != null) {
 			text = tap.processAttributes(specification.getAttributes(), text);
 		}
-		//translate braille using the same filter, regardless of language
+
 		return filter.filter(text);
 	}
 
@@ -131,7 +131,6 @@ public class DefaultBrailleFilter implements BrailleFilter {
 			texts = Arrays.asList(out).subList(start, end).stream();
 		}
 		
-		//translate braille using the same filter, regardless of language
 		return filter.filter(texts.collect(Collectors.joining()));
 	}
 

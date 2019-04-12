@@ -9,7 +9,6 @@ import java.util.Map;
 
 import org.daisy.dotify.api.translator.DefaultTextAttribute;
 import org.daisy.dotify.api.translator.TextAttribute;
-import org.daisy.dotify.api.translator.Translatable;
 import org.junit.Test;
 
 @SuppressWarnings("javadoc")
@@ -68,7 +67,7 @@ public class LiblouisBrailleFilterTest {
 	public void testToLiblouisSpecification_01() {
 		String input = "hyphenate";
 		String hyph = "hy\u00adphen\u00adate";
-		LiblouisTranslatable hp = LiblouisBrailleFilter.toLiblouisSpecification(hyph, Translatable.text(input).build(), null);
+		LiblouisTranslatable hp = LiblouisBrailleFilter.toLiblouisSpecification(hyph, input);
 		assertEquals(input, hp.getText());
 		assertArrayEquals(new int[] {0,1,0,0,0,1,0,0}, hp.getInterCharAtts());
 	}
@@ -77,7 +76,7 @@ public class LiblouisBrailleFilterTest {
 	public void testToLiblouisSpecification_02() {
 		String input = "- - -"; //002d, 0020, 002d, 0020, 002d
 		String hyph = "-\u200b -\u200b -"; //002d, 200b, 0020, 002d, 200b, 0020, 002d
-		LiblouisTranslatable hp = LiblouisBrailleFilter.toLiblouisSpecification(hyph, Translatable.text(input).build(), null);
+		LiblouisTranslatable hp = LiblouisBrailleFilter.toLiblouisSpecification(hyph, input);
 		assertEquals(input, hp.getText());
 		assertArrayEquals(new int[] {2,0,2,0}, hp.getInterCharAtts());
 	}
