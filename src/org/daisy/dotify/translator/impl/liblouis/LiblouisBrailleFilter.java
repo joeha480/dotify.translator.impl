@@ -17,7 +17,6 @@ import org.daisy.dotify.api.translator.Translatable;
 import org.daisy.dotify.api.translator.TranslatableWithContext;
 import org.daisy.dotify.api.translator.TranslationException;
 import org.daisy.dotify.api.translator.TranslatorSpecification;
-import org.daisy.dotify.translator.DefaultMarkerProcessor;
 import org.liblouis.CompilationException;
 import org.liblouis.DisplayException;
 import org.liblouis.DisplayTable.Fallback;
@@ -98,6 +97,14 @@ class LiblouisBrailleFilter implements BrailleFilter {
 			texts = texts.map(v->v.toLowerCase(Locale.ROOT));
 		}
 		
+		List<String> textsList = texts.collect(Collectors.toList());
+		String strIn = textsList.stream().collect(Collectors.joining());
+		Translatable.Builder tr = Translatable.text(strIn)
+				.locale(locale)
+				.hyphenate(specification.shouldHyphenate())
+				.markCapitalLetters(specification.shouldMarkCapitalLetters());
+
+		String strHyph;
 		if (specification.shouldHyphenate()) {
 			HyphenatorInterface h = hyphenators.get(locale);
 			if (h == null) {
@@ -109,21 +116,17 @@ class LiblouisBrailleFilter implements BrailleFilter {
 				hyphenators.put(locale, h);
 			}
 			HyphenatorInterface h2 = h;
-			texts = texts.map(v->h2.hyphenate(v));
+			strHyph = textsList.stream().map(v->h2.hyphenate(v)).collect(Collectors.joining());
+		} else {
+			strHyph = strIn;
 		}
-		
-		List<String> textsList = texts.collect(Collectors.toList());
-		String str = textsList.stream().collect(Collectors.joining());
-		Translatable.Builder tr = Translatable.text(str)
-				.locale(locale)
-				.hyphenate(specification.shouldHyphenate())
-				.markCapitalLetters(specification.shouldMarkCapitalLetters());
-		
-		specification.getAttributes()
-			.ifPresent(att->tr.attributes(DefaultMarkerProcessor.toTextAttribute(att, textsList)));
+		//FIXME: this doesn't work at all, because the Attribute with context extends beyond the texts
+		//in the list. 
+		//specification.getAttributes()
+		//	.ifPresent(att->tr.attributes(DefaultMarkerProcessor.toTextAttribute(att, textsList)));
 		
 		//translate braille using the same filter, regardless of language
-		LiblouisTranslatable louisSpec = toLiblouisSpecification(str, tr.build(), MARKERS);
+		LiblouisTranslatable louisSpec = toLiblouisSpecification(strHyph, tr.build(), MARKERS);
 		try {
 			return toBrailleFilterString(louisSpec.getText(), table.translate(louisSpec.getText(), louisSpec.getTypeForm(), louisSpec.getCharAtts(), louisSpec.getInterCharAtts(), new UnicodeBrailleDisplayTable(Fallback.MASK)));
 		} catch (org.liblouis.TranslationException | DisplayException e) {
