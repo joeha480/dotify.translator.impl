@@ -1,5 +1,6 @@
 package org.daisy.dotify.translator;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -101,33 +102,44 @@ public class DefaultBrailleFilter implements BrailleFilter {
 
 	@Override
 	public String filter(TranslatableWithContext specification) throws TranslationException {
-		Stream<String> texts = specification.getTextToTranslate().stream()
-			.map(v->{
-				String text = v.resolve();
-				if (!v.shouldMarkCapitalLetters()) {
-					//TODO: toLowerCase may not always do what we want here,
-					//it depends on the lower case algorithm and the rules 
-					//of the braille for that language
-					text = text.toLowerCase(Locale.ROOT);
-				}
-				if (v.shouldHyphenate()) {
-					String locale = v.getLocale().orElse(loc);
-					HyphenatorInterface h = hyphenators.get(locale);
-					if (h == null) {
-						try {
-							h = hyphenatorFactoryMaker.newHyphenator(locale);
-						} catch (HyphenatorConfigurationException e) {
-							if (LOGGER.isLoggable(Level.WARNING)) {
-								LOGGER.log(Level.WARNING, String.format("Failed to create hyphenator for %s", locale), e);
-							}
+		List<String> tmp = new ArrayList<>();
+		int i = 0;
+		int len = specification.getTextToTranslate().size();
+		for (ResolvableText v : specification.getTextToTranslate()) {
+			String text = v.resolve();
+			if (!v.shouldMarkCapitalLetters()) {
+				//TODO: toLowerCase may not always do what we want here,
+				//it depends on the lower case algorithm and the rules 
+				//of the braille for that language
+				text = text.toLowerCase(Locale.ROOT);
+			}
+			if (v.shouldHyphenate()) {
+				String locale = v.getLocale().orElse(loc);
+				HyphenatorInterface h = hyphenators.get(locale);
+				if (h == null) {
+					try {
+						h = hyphenatorFactoryMaker.newHyphenator(locale);
+					} catch (HyphenatorConfigurationException e) {
+						if (LOGGER.isLoggable(Level.WARNING)) {
+							LOGGER.log(Level.WARNING, String.format("Failed to create hyphenator for %s", locale), e);
 						}
-						hyphenators.put(locale, h);
 					}
-					HyphenatorInterface h2 = h;
-					text = h2.hyphenate(text);
+					hyphenators.put(locale, h);
 				}
-				return text;
-			});
+				HyphenatorInterface h2 = h;
+				text = h2.hyphenate(text);
+				if (len>i+1 && Character.isLetter(text.charAt(text.length()-1))) { 
+					ResolvableText next = specification.getTextToTranslate().get(i+1);
+					if (next.shouldHyphenate() && locale.equals(next.getLocale().orElse(loc)) && next.resolve().length()>0 && Character.isLetter(next.resolve().charAt(0))) {
+						//Assume that hyphenation is possible
+						text = text + "\u00ad";
+					}
+				}
+			}
+			tmp.add(text);
+			i++;
+		}
+		Stream<String> texts = tmp.stream();
 		if (tap != null && specification.getAttributes().isPresent()) {
 			Stream<String> preceding = specification.getPrecedingText().stream().map(v->v.resolve());
 			Stream<String> following = specification.getFollowingText().stream().map(v->v.peek());
