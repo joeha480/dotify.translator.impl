@@ -226,9 +226,9 @@ class LiblouisBrailleFilter implements BrailleFilter {
 		short[] ret = new short[attr.getWidth()];
 		short typeForm = 0;
 		if (attr.getDictionaryIdentifier()!=null) {
-			Short v = map.get(attr.getDictionaryIdentifier()).shortValue();
-			if (v!=null) {
-				typeForm = v;
+			Integer tfValue = map.get(attr.getDictionaryIdentifier());
+			if (tfValue!=null) {
+				typeForm = tfValue.shortValue();
 			}
 		}
 
