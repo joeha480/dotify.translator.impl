@@ -5,11 +5,11 @@ import java.util.Optional;
 import org.daisy.dotify.api.hyphenator.HyphenatorFactoryMakerService;
 import org.daisy.dotify.api.translator.BrailleTranslator;
 import org.daisy.dotify.api.translator.BrailleTranslatorFactory;
-import org.daisy.dotify.api.translator.MarkerProcessor;
 import org.daisy.dotify.api.translator.MarkerProcessorConfigurationException;
 import org.daisy.dotify.api.translator.TranslatorConfigurationException;
 import org.daisy.dotify.api.translator.TranslatorType;
 import org.daisy.dotify.translator.DefaultBrailleFilter;
+import org.daisy.dotify.translator.DefaultMarkerProcessor;
 import org.daisy.dotify.translator.PreTranslatedBrailleFilter;
 import org.daisy.dotify.translator.SimpleBrailleTranslator;
 import org.daisy.dotify.translator.impl.DefaultBrailleFinalizer;
@@ -31,7 +31,7 @@ class SwedishBrailleTranslatorFactory implements BrailleTranslatorFactory {
 		Optional<String> loc = getSupportedLocale(locale);
 		if (loc.isPresent() && mode.equals(TranslatorType.UNCONTRACTED.toString())) {
 
-			MarkerProcessor sap;
+			DefaultMarkerProcessor sap;
 			try {
 				sap = new SwedishMarkerProcessorFactory().newMarkerProcessor(loc.get(), mode);
 			} catch (MarkerProcessorConfigurationException e) {

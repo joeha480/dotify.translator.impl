@@ -4,13 +4,11 @@ class LiblouisTranslatable {
 	private final String text;
 	private final int[] charAtts;
 	private final int[] interCharAtts;
-	private final short[] typeForm;
 
-	LiblouisTranslatable(String text, int[] charAtts, int[] interCharAtts, short[] typeForm) {
+	LiblouisTranslatable(String text, int[] charAtts, int[] interCharAtts) {
 		this.text = text;
 		this.charAtts = charAtts;
 		this.interCharAtts = interCharAtts;
-		this.typeForm = typeForm;
 	}
 
 	String getText() {
@@ -23,10 +21,6 @@ class LiblouisTranslatable {
 
 	int[] getInterCharAtts() {
 		return interCharAtts;
-	}
-
-	short[] getTypeForm() {
-		return typeForm;
 	}
 
 }
