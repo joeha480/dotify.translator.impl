@@ -8,8 +8,9 @@ import org.osgi.service.component.annotations.Component;
 /**
  * Provides a Swedish marker processor factory service.
  * @author Joel Håkansson
- *
+ * @deprecated without replacement
  */
+@Deprecated
 @Component
 public class SwedishMarkerProcessorFactoryService implements
 		MarkerProcessorFactoryService {

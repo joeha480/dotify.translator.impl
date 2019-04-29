@@ -12,6 +12,7 @@ import org.daisy.dotify.translator.RegexMarkerDictionary;
 import org.daisy.dotify.translator.SimpleMarkerDictionary;
 import org.daisy.dotify.translator.TextAttributeFilter;
 
+//Note that while the Marker processor API has been deprecated, this class has not
 class SwedishMarkerProcessorFactory implements MarkerProcessorFactory {
 	private static final String WHITESPACE_REGEX = "\\s+";
 	private static final String ALPHANUM_REGEX = "\\A[a-zA-Z0-9]+\\z";

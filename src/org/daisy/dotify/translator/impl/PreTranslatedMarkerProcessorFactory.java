@@ -6,6 +6,7 @@ import org.daisy.dotify.api.translator.MarkerProcessorFactory;
 import org.daisy.dotify.api.translator.TranslatorType;
 import org.daisy.dotify.translator.DefaultMarkerProcessor;
 
+@Deprecated
 class PreTranslatedMarkerProcessorFactory implements
 		MarkerProcessorFactory {
 
