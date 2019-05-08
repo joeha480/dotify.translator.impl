@@ -102,7 +102,23 @@ public class DefaultBrailleFilter implements BrailleFilter {
 
 	@Override
 	public String filter(TranslatableWithContext specification) throws TranslationException {
-		List<String> tmp = new ArrayList<>();
+		Stream<String> texts = processCapitalLettersAndHyphenate(specification).stream();
+		
+		if (tap != null && specification.getAttributes().isPresent()) {
+			Stream<String> preceding = specification.getPrecedingText().stream().map(v->v.resolve());
+			Stream<String> following = specification.getFollowingText().stream().map(v->v.peek());
+			List<String> textsI = Stream.concat(Stream.concat(preceding, texts), following).collect(Collectors.toList());
+			String[] out = tap.processAttributesRetain(specification.getAttributes().get(), textsI);
+			int start = specification.getPrecedingText().size();
+			int end = start + specification.getTextToTranslate().size();
+			texts = Arrays.asList(out).subList(start, end).stream();
+		}
+		
+		return filter.filter(texts.collect(Collectors.joining()));
+	}
+	
+	private List<String> processCapitalLettersAndHyphenate(TranslatableWithContext specification) {
+		List<String> ret = new ArrayList<>();
 		int i = 0;
 		int len = specification.getTextToTranslate().size();
 		for (ResolvableText v : specification.getTextToTranslate()) {
@@ -136,21 +152,10 @@ public class DefaultBrailleFilter implements BrailleFilter {
 					}
 				}
 			}
-			tmp.add(text);
+			ret.add(text);
 			i++;
 		}
-		Stream<String> texts = tmp.stream();
-		if (tap != null && specification.getAttributes().isPresent()) {
-			Stream<String> preceding = specification.getPrecedingText().stream().map(v->v.resolve());
-			Stream<String> following = specification.getFollowingText().stream().map(v->v.peek());
-			List<String> textsI = Stream.concat(Stream.concat(preceding, texts), following).collect(Collectors.toList());
-			String[] out = tap.processAttributesRetain(specification.getAttributes().get(), textsI);
-			int start = specification.getPrecedingText().size();
-			int end = start + specification.getTextToTranslate().size();
-			texts = Arrays.asList(out).subList(start, end).stream();
-		}
-		
-		return filter.filter(texts.collect(Collectors.joining()));
+		return ret;
 	}
 
 	private class DefaultBrailleFilterException extends TranslationException {

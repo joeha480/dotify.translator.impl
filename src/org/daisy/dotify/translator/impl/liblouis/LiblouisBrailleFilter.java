@@ -1,5 +1,6 @@
 package org.daisy.dotify.translator.impl.liblouis;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -15,6 +16,7 @@ import org.daisy.dotify.api.hyphenator.HyphenatorConfigurationException;
 import org.daisy.dotify.api.hyphenator.HyphenatorFactoryMakerService;
 import org.daisy.dotify.api.hyphenator.HyphenatorInterface;
 import org.daisy.dotify.api.translator.BrailleFilter;
+import org.daisy.dotify.api.translator.ResolvableText;
 import org.daisy.dotify.api.translator.TextAttribute;
 import org.daisy.dotify.api.translator.Translatable;
 import org.daisy.dotify.api.translator.TranslatableWithContext;
@@ -118,34 +120,44 @@ class LiblouisBrailleFilter implements BrailleFilter {
 	
 	@Override
 	public String filter(TranslatableWithContext specification) throws TranslationException {
-		List<TextForLiblouis> parts = specification.getTextToTranslate().stream()
-			.map(v->{
-				String text = v.resolve();
-				String hyphText = text;
-				if (!v.shouldMarkCapitalLetters()) {
-					//TODO: toLowerCase may not always do what we want here,
-					//it depends on the lower case algorithm and the rules 
-					//of the braille for that language
-					text = text.toLowerCase(Locale.ROOT);
-				}
-				if (v.shouldHyphenate()) {
-					String locale = v.getLocale().orElse(loc);
-					HyphenatorInterface h = hyphenators.get(locale);
-					if (h == null) {
-						try {
-							h = hyphenatorFactoryMaker.newHyphenator(locale);
-						} catch (HyphenatorConfigurationException e) {
-							if (LOGGER.isLoggable(Level.WARNING)) {
-								LOGGER.log(Level.WARNING, String.format("Failed to create hyphenator for %s", locale), e);
-							}
+		List<TextForLiblouis> parts  = new ArrayList<>();
+		int i = 0;
+		int len = specification.getTextToTranslate().size();
+		for (ResolvableText v : specification.getTextToTranslate()) {
+			String text = v.resolve();
+			String hyphText = text;
+			if (!v.shouldMarkCapitalLetters()) {
+				//TODO: toLowerCase may not always do what we want here,
+				//it depends on the lower case algorithm and the rules 
+				//of the braille for that language
+				text = text.toLowerCase(Locale.ROOT);
+			}
+			if (v.shouldHyphenate()) {
+				String locale = v.getLocale().orElse(loc);
+				HyphenatorInterface h = hyphenators.get(locale);
+				if (h == null) {
+					try {
+						h = hyphenatorFactoryMaker.newHyphenator(locale);
+					} catch (HyphenatorConfigurationException e) {
+						if (LOGGER.isLoggable(Level.WARNING)) {
+							LOGGER.log(Level.WARNING, String.format("Failed to create hyphenator for %s", locale), e);
 						}
-						hyphenators.put(locale, h);
 					}
-					hyphText = h.hyphenate(text);
+					hyphenators.put(locale, h);
 				}
-				return new TextForLiblouis(text, hyphText);
-			})
-			.collect(Collectors.toList());
+				hyphText = h.hyphenate(text);
+				if (len>i+1 && Character.isLetter(hyphText.charAt(hyphText.length()-1))) { 
+					ResolvableText next = specification.getTextToTranslate().get(i+1);
+					if (next.shouldHyphenate() && locale.equals(next.getLocale().orElse(loc)) && next.resolve().length()>0 && Character.isLetter(next.resolve().charAt(0))) {
+						//Assume that hyphenation is possible
+						hyphText = hyphText + "\u00ad";
+					}
+				}
+
+			}
+			parts.add(new TextForLiblouis(text, hyphText));
+			i++;
+		}
 		
 		String strIn = parts.stream().map(v->v.text).collect(Collectors.joining());
 		String strHyph = parts.stream().map(v->v.hyphText).collect(Collectors.joining());
