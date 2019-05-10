@@ -107,29 +107,30 @@ public class DefaultBrailleFilter implements BrailleFilter {
 
 	@Override
 	public String filter(TranslatableWithContext specification) throws TranslationException {
-		Stream<String> texts = processCapitalLettersAndHyphenate(specification).stream();
+		Stream<String> inStream = specification.getTextToTranslate().stream().map(v->v.resolve());
+		List<String> texts;
 		
 		if (tap != null && specification.getAttributes().isPresent()) {
 			Stream<String> preceding = specification.getPrecedingText().stream().map(v->v.resolve());
 			Stream<String> following = specification.getFollowingText().stream().map(v->v.peek());
-			List<String> textsI = Stream.concat(Stream.concat(preceding, texts), following).collect(Collectors.toList());
+			List<String> textsI = Stream.concat(Stream.concat(preceding, inStream), following).collect(Collectors.toList());
 			String[] out = tap.processAttributesRetain(specification.getAttributes().get(), textsI);
 			int start = specification.getPrecedingText().size();
 			int end = start + specification.getTextToTranslate().size();
-			texts = Arrays.asList(out).subList(start, end).stream();
+			texts = Arrays.asList(out).subList(start, end);
+		} else {
+			texts = inStream.collect(Collectors.toList());
 		}
 		
-		return filter.filter(texts.collect(Collectors.joining()));
+		return filter.filter(processCapitalLettersAndHyphenate(specification, texts).stream().collect(Collectors.joining()));
 	}
 	
-	private List<String> processCapitalLettersAndHyphenate(TranslatableWithContext specification) {
+	private List<String> processCapitalLettersAndHyphenate(TranslatableWithContext specification, List<String> texts) {
 		List<String> ret = new ArrayList<>();
 		int i = 0;
-		int prv = specification.getPrecedingText().size();
-		int len = specification.getTextToTranslate().size();
-		long[] atts = specification.getAttributes().isPresent()?toLinearForm(specification.getAttributes().get()):null;
+		int len = texts.size();
 		for (ResolvableText v : specification.getTextToTranslate()) {
-			String text = v.resolve();
+			String text = texts.get(i);
 			if (!v.shouldMarkCapitalLetters()) {
 				//TODO: toLowerCase may not always do what we want here,
 				//it depends on the lower case algorithm and the rules 
@@ -154,19 +155,13 @@ public class DefaultBrailleFilter implements BrailleFilter {
 				// If there is a following segment and this segment ends with a letter
 				if (len>i+1 && Character.isLetter(text.charAt(text.length()-1))) {
 					ResolvableText next = specification.getTextToTranslate().get(i+1);
-					boolean attsOk = atts==null ||
-							// The attributes of the next segment may close some styles but not open any
-							// Note that this isn't really correct. For example, if there is post-marker contents, then
-							// this could be incorrect. Also, a reset sign should probably be inserted in some cases.
-							// It tries to mimic the implementation used before, but may be improved.
-							(atts[prv+i] | atts[prv+i+1]) == atts[prv+i];
+					String nextStr = texts.get(i+1);
 					if (next.shouldHyphenate()
 							&& locale.equals(next.getLocale().orElse(loc)) 
-							&& next.resolve().length()>0 
-							&& Character.isLetter(next.resolve().charAt(0))
-							&& attsOk
+							&& nextStr.length()>0 
+							&& Character.isLetter(nextStr.charAt(0))
 							) {
-						String textN = text + next.peek();
+						String textN = text + nextStr;
 						// Since this segment has already been translated it should not change, therefore we can just remove the substring and see if it starts with a soft hyphen
 						if (h.hyphenate(textN).substring(text.length()).startsWith("\u00ad")) {
 							text = text + "\u00ad";
