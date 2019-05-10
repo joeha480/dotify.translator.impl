@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -107,6 +108,9 @@ public class DefaultBrailleFilter implements BrailleFilter {
 
 	@Override
 	public String filter(TranslatableWithContext specification) throws TranslationException {
+		if (specification.getTextToTranslate().isEmpty()) {
+			return "";
+		}
 		Stream<String> inStream = specification.getTextToTranslate().stream().map(v->v.resolve());
 		List<String> texts;
 		
@@ -122,7 +126,44 @@ public class DefaultBrailleFilter implements BrailleFilter {
 			texts = inStream.collect(Collectors.toList());
 		}
 		
-		return filter.filter(processCapitalLettersAndHyphenate(specification, texts).stream().collect(Collectors.joining()));
+		// We've checked that there is at least one text to translate
+		Optional<String> l = specification.getTextToTranslate().get(0).getLocale();
+		boolean h = specification.getTextToTranslate().get(0).shouldHyphenate();
+		boolean m = specification.getTextToTranslate().get(0).shouldMarkCapitalLetters();
+		
+		int i = 0;
+		StringBuilder ret = new StringBuilder();
+		StringBuilder toTranslate = new StringBuilder();
+		for (ResolvableText t : specification.getTextToTranslate()) {
+			if (!t.getLocale().equals(l) || t.shouldHyphenate()!=h || t.shouldMarkCapitalLetters()!=m) {
+				//Flush
+				Translatable.Builder b = Translatable.text(toTranslate.toString())
+						.hyphenate(h)
+						.markCapitalLetters(m);
+				if (l.isPresent()) {
+					b.locale(l.get());
+				}
+				ret.append(filter(b.build()));
+				// Set
+				l = t.getLocale();
+				h = t.shouldHyphenate();
+				m = t.shouldMarkCapitalLetters();
+				toTranslate = new StringBuilder();
+			}
+			toTranslate.append(texts.get(i));
+			i++;
+		}
+		if (toTranslate.length()>0) {
+			//Flush
+			Translatable.Builder b = Translatable.text(toTranslate.toString())
+					.hyphenate(h)
+					.markCapitalLetters(m);
+			if (l.isPresent()) {
+				b.locale(l.get());
+			}
+			ret.append(filter(b.build()));
+		}
+		return ret.toString();
 	}
 	
 	private List<String> processCapitalLettersAndHyphenate(TranslatableWithContext specification, List<String> texts) {
