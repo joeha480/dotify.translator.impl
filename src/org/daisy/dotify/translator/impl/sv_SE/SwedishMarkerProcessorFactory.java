@@ -1,6 +1,5 @@
 package org.daisy.dotify.translator.impl.sv_SE;
 
-import org.daisy.dotify.api.translator.MarkerProcessor;
 import org.daisy.dotify.api.translator.MarkerProcessorConfigurationException;
 import org.daisy.dotify.api.translator.MarkerProcessorFactory;
 import org.daisy.dotify.api.translator.TextAttribute;
@@ -13,6 +12,7 @@ import org.daisy.dotify.translator.RegexMarkerDictionary;
 import org.daisy.dotify.translator.SimpleMarkerDictionary;
 import org.daisy.dotify.translator.TextAttributeFilter;
 
+//Note that while the Marker processor API has been deprecated, this class has not
 class SwedishMarkerProcessorFactory implements MarkerProcessorFactory {
 	private static final String WHITESPACE_REGEX = "\\s+";
 	private static final String ALPHANUM_REGEX = "\\A[a-zA-Z0-9]+\\z";
@@ -20,7 +20,7 @@ class SwedishMarkerProcessorFactory implements MarkerProcessorFactory {
 	private static final FilterLocale sv = FilterLocale.parse("sv");
 
 	@Override
-	public MarkerProcessor newMarkerProcessor(String locale, String mode) throws MarkerProcessorConfigurationException {
+	public DefaultMarkerProcessor newMarkerProcessor(String locale, String mode) throws MarkerProcessorConfigurationException {
 		if (FilterLocale.parse(locale).equals(sv)||FilterLocale.parse(locale).equals(sv_SE)) {
 			if (mode.equals(TranslatorType.UNCONTRACTED.toString())) {
 	

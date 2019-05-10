@@ -8,8 +8,10 @@ import org.osgi.service.component.annotations.Component;
 /**
  * Provides a pass through marker processor factory service.
  * @author Joel Håkansson
+ * @deprecated without replacement
  */
 @Component
+@Deprecated
 public class DefaultBypassMarkerProcessorFactoryService implements
 		MarkerProcessorFactoryService {
 

@@ -13,7 +13,7 @@ class DefaultBypassMarkerProcessorFactory implements
 		MarkerProcessorFactory {
 
 	@Override
-	public MarkerProcessor newMarkerProcessor(String locale, String mode) throws MarkerProcessorConfigurationException {
+	public DefaultMarkerProcessor newMarkerProcessor(String locale, String mode) throws MarkerProcessorConfigurationException {
 		if (mode.equals(TranslatorType.BYPASS.toString())) {
 			SimpleMarkerDictionary dd = new SimpleMarkerDictionary(new Marker("* ", ""));
 

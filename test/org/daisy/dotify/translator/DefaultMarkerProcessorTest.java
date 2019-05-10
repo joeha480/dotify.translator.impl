@@ -1,13 +1,18 @@
 package org.daisy.dotify.translator;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.Iterator;
 
+import org.daisy.dotify.api.translator.DefaultAttributeWithContext;
 import org.daisy.dotify.api.translator.DefaultTextAttribute;
-import org.daisy.dotify.translator.DefaultMarkerProcessor;
-import org.daisy.dotify.translator.RegexMarkerDictionary;
+import org.daisy.dotify.api.translator.TextAttribute;
+import org.junit.Ignore;
 import org.junit.Test;
 
 @SuppressWarnings("javadoc")
@@ -92,6 +97,49 @@ public class DefaultMarkerProcessorTest {
 	}
 	
 	@Test
+	@Ignore
+	public void testProcessAttributesRetain_04() {
+		DefaultTextAttribute t = new DefaultTextAttribute.Builder()
+		.add(new DefaultTextAttribute.Builder("i")
+				.add(new DefaultTextAttribute.Builder().build(1))
+				.add(new DefaultTextAttribute.Builder("b")
+						.add(new DefaultTextAttribute.Builder().build(0))
+						.build(0))
+				.add(new DefaultTextAttribute.Builder().build(1))
+				.build(2)
+			)
+		.build(2);
+		DefaultMarkerProcessor mp = new DefaultMarkerProcessor.Builder()
+				.addDictionary("i", (String str, TextAttribute attributes)->new Marker("1>", "<1"))
+				.addDictionary("b", (String str, TextAttribute attributes)->new Marker("2>", "<2"))
+				.build();
+		String[] actual = mp.processAttributesRetain(t, new String[]{"a", "", "c"});
+
+		assertArrayEquals(new String[] {">1a", "2><2", "c<1"}, actual);
+	}
+	
+	public void testProcessAttributesRetainContext() {
+		DefaultAttributeWithContext t = new DefaultAttributeWithContext.Builder()
+		.add(new DefaultAttributeWithContext.Builder("i")
+				.add(new DefaultAttributeWithContext.Builder().build(1))
+				.add(new DefaultAttributeWithContext.Builder("b")
+						.add(new DefaultAttributeWithContext.Builder().build(1))
+						.build(1))
+				.add(new DefaultAttributeWithContext.Builder().build(1))
+				.build(3)
+			)
+		.build(3);
+		DefaultMarkerProcessor mp = new DefaultMarkerProcessor.Builder()
+				.addDictionary("i", (String str, TextAttribute attributes)->new Marker("1>", "<1"))
+				.addDictionary("b", (String str, TextAttribute attributes)->new Marker("2>", "<2"))
+				.build();
+		String[] actual = mp.processAttributesRetain(t, Arrays.asList("a", "", "c"));
+
+		assertArrayEquals(new String[] {">1a", "2><2", "c<1"}, actual);
+	}
+
+	
+	@Test
 	public void test_04() {
 		SubstringReturn ret = sap_substrings(new String[] { "12345", "678", "9ABC" }, 5, 7);
 		assertEquals(Arrays.toString(ret.getStrings()), 1, ret.getStrings().length);
@@ -151,6 +199,60 @@ public class DefaultMarkerProcessorTest {
 		String[] ret = sap.processAttributesRetain(t.build(0), new String[]{});
 		assertEquals(1, ret.length);
 		assertEquals("{sb::sb}", ret[0]);
+	}
+	
+	@Test
+	public void testToTextAttribute_01() {
+		DefaultAttributeWithContext context = new DefaultAttributeWithContext.Builder("em")
+				.add(2)
+				.add(new DefaultAttributeWithContext.Builder("strong")
+						.build(1))
+				.add(1)
+				.build(4);
+		TextAttribute ta = DefaultMarkerProcessor.toTextAttribute(context, Arrays.asList("ab", "cde", "fa", "ghi"));
+		assertEquals(10, ta.getWidth());
+		assertEquals("em", ta.getDictionaryIdentifier());
+		assertTrue(ta.hasChildren());
+		Iterator<TextAttribute> i = ta.iterator();
+		{
+			TextAttribute a = i.next();
+			assertEquals(5, a.getWidth());
+			assertEquals(null, a.getDictionaryIdentifier());
+			assertFalse(a.hasChildren());			
+		}
+		{
+			TextAttribute a = i.next();
+			assertEquals(2, a.getWidth());
+			assertEquals("strong", a.getDictionaryIdentifier());
+			assertFalse(a.hasChildren());			
+		}
+		{
+			TextAttribute a = i.next();
+			assertEquals(3, a.getWidth());
+			assertEquals(null, a.getDictionaryIdentifier());
+			assertFalse(a.hasChildren());			
+		}
+		assertFalse(i.hasNext());
+	}
+	
+	@Test
+	public void testToTextAttribute_02() {
+		DefaultAttributeWithContext context = new DefaultAttributeWithContext.Builder()
+				.add(new DefaultAttributeWithContext.Builder("strong")
+						.build(4))
+				.build(4);
+		TextAttribute ta = DefaultMarkerProcessor.toTextAttribute(context, Arrays.asList("ab", "cde", "fa", "ghi"));
+		assertEquals(10, ta.getWidth());
+		assertEquals(null, ta.getDictionaryIdentifier());
+		assertTrue(ta.hasChildren());
+		Iterator<TextAttribute> i = ta.iterator();
+		{
+			TextAttribute a = i.next();
+			assertEquals(10, a.getWidth());
+			assertEquals("strong", a.getDictionaryIdentifier());
+			assertFalse(a.hasChildren());			
+		}
+		assertFalse(i.hasNext());
 	}
 
 	private String join(String[] strs) {

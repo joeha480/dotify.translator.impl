@@ -8,8 +8,9 @@ import org.osgi.service.component.annotations.Component;
 /**
  * Provides a pre-translated marker processor factory service.
  * @author Joel Håkansson
- *
+ * @deprecated without replacement
  */
+@Deprecated
 @Component
 public class PreTranslatedMarkerProcessorFactoryService implements
 		MarkerProcessorFactoryService {

@@ -3,10 +3,12 @@ package org.daisy.dotify.translator.impl;
 import org.daisy.dotify.api.hyphenator.HyphenatorFactoryMakerService;
 import org.daisy.dotify.api.translator.BrailleTranslator;
 import org.daisy.dotify.api.translator.BrailleTranslatorFactory;
+import org.daisy.dotify.api.translator.MarkerProcessorConfigurationException;
 import org.daisy.dotify.api.translator.TranslatorConfigurationException;
 import org.daisy.dotify.api.translator.TranslatorType;
 import org.daisy.dotify.common.text.IdentityFilter;
 import org.daisy.dotify.translator.DefaultBrailleFilter;
+import org.daisy.dotify.translator.DefaultMarkerProcessor;
 import org.daisy.dotify.translator.SimpleBrailleTranslator;
 
 class DefaultBypassTranslatorFactory implements BrailleTranslatorFactory {
@@ -21,8 +23,14 @@ class DefaultBypassTranslatorFactory implements BrailleTranslatorFactory {
 		if (hyphenatorService == null) {
 			throw new DefaultBypassTranslatorConfigurationException("HyphenatorFactoryMakerService not set.");
 		} else if (mode.equals(TranslatorType.BYPASS.toString())) {
+			DefaultMarkerProcessor sap;
+			try {
+				sap = new DefaultBypassMarkerProcessorFactory().newMarkerProcessor(locale, mode);
+			} catch (MarkerProcessorConfigurationException e) {
+				throw new DefaultBypassTranslatorConfigurationException(e);
+			}
 			return new SimpleBrailleTranslator(
-					new DefaultBrailleFilter(new IdentityFilter(), locale, hyphenatorService),
+					new DefaultBrailleFilter(new IdentityFilter(), locale, sap, hyphenatorService),
 					mode);
 		}
 		throw new DefaultBypassTranslatorConfigurationException("Factory does not support " + locale + "/" + mode);
@@ -37,6 +45,10 @@ class DefaultBypassTranslatorFactory implements BrailleTranslatorFactory {
 
 		private DefaultBypassTranslatorConfigurationException(String message) {
 			super(message);
+		}
+		
+		DefaultBypassTranslatorConfigurationException(Throwable cause) {
+			super(cause);
 		}
 	}
 
