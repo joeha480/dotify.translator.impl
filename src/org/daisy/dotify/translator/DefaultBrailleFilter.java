@@ -2,7 +2,6 @@ package org.daisy.dotify.translator;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -150,13 +149,28 @@ public class DefaultBrailleFilter implements BrailleFilter {
 					}
 					hyphenators.put(locale, h);
 				}
-				HyphenatorInterface h2 = h;
-				text = h2.hyphenate(text);
-				if (len>i+1 && Character.isLetter(text.charAt(text.length()-1)) && (atts==null || atts[prv+i]==atts[prv+i+1])) {
+				
+				text = h.hyphenate(text);
+				// If there is a following segment and this segment ends with a letter
+				if (len>i+1 && Character.isLetter(text.charAt(text.length()-1))) {
 					ResolvableText next = specification.getTextToTranslate().get(i+1);
-					if (next.shouldHyphenate() && locale.equals(next.getLocale().orElse(loc)) && next.resolve().length()>0 && Character.isLetter(next.resolve().charAt(0))) {
-						//Assume that hyphenation is possible
-						text = text + "\u00ad";
+					boolean attsOk = atts==null ||
+							// The attributes of the next segment may close some styles but not open any
+							// Note that this isn't really correct. For example, if there is post-marker contents, then
+							// this could be incorrect. Also, a reset sign should probably be inserted in some cases.
+							// It tries to mimic the implementation used before, but may be improved.
+							(atts[prv+i] | atts[prv+i+1]) == atts[prv+i];
+					if (next.shouldHyphenate()
+							&& locale.equals(next.getLocale().orElse(loc)) 
+							&& next.resolve().length()>0 
+							&& Character.isLetter(next.resolve().charAt(0))
+							&& attsOk
+							) {
+						String textN = text + next.peek();
+						// Since this segment has already been translated it should not change, therefore we can just remove the substring and see if it starts with a soft hyphen
+						if (h.hyphenate(textN).substring(text.length()).startsWith("\u00ad")) {
+							text = text + "\u00ad";
+						}
 					}
 				}
 			}
