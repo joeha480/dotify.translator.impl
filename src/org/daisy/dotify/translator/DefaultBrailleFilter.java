@@ -2,10 +2,13 @@ package org.daisy.dotify.translator;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -14,6 +17,7 @@ import java.util.stream.Stream;
 import org.daisy.dotify.api.hyphenator.HyphenatorConfigurationException;
 import org.daisy.dotify.api.hyphenator.HyphenatorFactoryMakerService;
 import org.daisy.dotify.api.hyphenator.HyphenatorInterface;
+import org.daisy.dotify.api.translator.AttributeWithContext;
 import org.daisy.dotify.api.translator.BrailleFilter;
 import org.daisy.dotify.api.translator.ResolvableText;
 import org.daisy.dotify.api.translator.Translatable;
@@ -29,7 +33,9 @@ import org.daisy.dotify.common.text.StringFilter;
  *
  */
 public class DefaultBrailleFilter implements BrailleFilter {
-	private static final Logger LOGGER = Logger.getLogger(DefaultBrailleFilter.class.getCanonicalName());
+	private static final Logger LOGGER = Logger.getLogger(DefaultBrailleFilter.class.getCanonicalName());	
+	private static final Set<String> HYPH_STYLES = new HashSet<>(Arrays.asList("em", "strong"));
+
 	private final String loc;
 	private final StringFilter filter;
 	private final DefaultMarkerProcessor tap;
@@ -120,7 +126,9 @@ public class DefaultBrailleFilter implements BrailleFilter {
 	private List<String> processCapitalLettersAndHyphenate(TranslatableWithContext specification) {
 		List<String> ret = new ArrayList<>();
 		int i = 0;
+		int prv = specification.getPrecedingText().size();
 		int len = specification.getTextToTranslate().size();
+		long[] atts = specification.getAttributes().isPresent()?toLinearForm(specification.getAttributes().get()):null;
 		for (ResolvableText v : specification.getTextToTranslate()) {
 			String text = v.resolve();
 			if (!v.shouldMarkCapitalLetters()) {
@@ -144,7 +152,7 @@ public class DefaultBrailleFilter implements BrailleFilter {
 				}
 				HyphenatorInterface h2 = h;
 				text = h2.hyphenate(text);
-				if (len>i+1 && Character.isLetter(text.charAt(text.length()-1))) { 
+				if (len>i+1 && Character.isLetter(text.charAt(text.length()-1)) && (atts==null || atts[prv+i]==atts[prv+i+1])) {
 					ResolvableText next = specification.getTextToTranslate().get(i+1);
 					if (next.shouldHyphenate() && locale.equals(next.getLocale().orElse(loc)) && next.resolve().length()>0 && Character.isLetter(next.resolve().charAt(0))) {
 						//Assume that hyphenation is possible
@@ -155,6 +163,54 @@ public class DefaultBrailleFilter implements BrailleFilter {
 			ret.add(text);
 			i++;
 		}
+		return ret;
+	}
+
+	private static long[] toLinearForm(AttributeWithContext attr) {
+		return toLinearForm(attr, HYPH_STYLES);
+	}
+	
+	static long[] toLinearForm(AttributeWithContext attr, Set<String> filter) {
+		return toLinearForm(attr, new HashMap<>(), filter);
+	}
+
+	private static long[] toLinearForm(AttributeWithContext attr, Map<String, Long> map, Set<String> filter) {
+		long idNumber = 0;
+		if (attr.getName().isPresent()) {
+			String name = attr.getName().get();
+			if (!filter.contains(name)) {
+				Long idNum = map.get(name);
+				if (idNum!=null) {
+					idNumber = idNum.longValue();
+				} else {
+					// All id's are powers of 2 so that they can be combined without losing information
+					// When the map is empty, the new id is 1. The second time it's 2, then 4 etc.
+					if (map.size()>62) {
+						if (LOGGER.isLoggable(Level.WARNING)) {
+							LOGGER.log(Level.WARNING, "Too many styles, ignoring style " + name);
+						}
+					} else {
+						idNumber = 1 << map.size();
+						map.put(name, idNumber);
+					}
+				}
+			}
+		}
+
+		long[] ret = new long[attr.getWidth()];
+		if (attr.hasChildren()) {
+			int offset = 0;
+			for (AttributeWithContext t : attr) {
+				long[] v = toLinearForm(t, map, filter);
+				for (int i=0; i<v.length; i++) {
+					ret[i+offset] = idNumber | v[i];
+				}
+				offset += t.getWidth();
+			}
+		} else {
+			Arrays.fill(ret, idNumber);
+		}
+
 		return ret;
 	}
 
